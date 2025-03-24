@@ -6,3 +6,7 @@ __pycache__/
 
 # 账号密码信息
 .env
+.env.json
+
+# 测试
+test*
