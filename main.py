@@ -16,6 +16,38 @@ with open(".env.json", "r", encoding="utf-8") as f:
     PASSWORD_ENCRYPTED = data.get("passwordEncrypted")
     SERVICE = data.get("service")
 
+# 获取JSESSIONID
+url = "http://202.202.145.132"
+
+headers3 = {
+    "Accept-Language": "zh-CN",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Host": "202.202.145.132",
+}
+
+response = requests.get(url, headers=headers3, allow_redirects=False)  # 禁止重定向
+JSESSIONID = list(response.cookies)[0].value
+
+ic(JSESSIONID)
+
+if response.status_code == 302:
+    target = response.headers["Location"]
+    response = requests.get(target, headers=headers3)
+else:
+    ic("状态码出错")
+    exit(0)
+
+pattern = r"top\.self\.location\.href='([^']*)'"
+match = re.search(pattern, response.text)
+href_value = match.group(1)
+queryString = href_value.split("?")[1]
+
+ic(queryString)
+
 url = "https://uis.cqut.edu.cn/center-auth-server/vbZl4061/cas/login?service=https://sid.cqut.edu.cn/cas/login?client_name=adapter"
 
 headers1 = {
@@ -74,32 +106,6 @@ response = requests.post(url, headers=headers2, data=json.dumps(data), cookies=c
 ic(response.status_code)
 ic(response.text)
 
-# 获取JSESSIONID
-url = "http://202.202.145.132"
-
-headers3 = {
-    "Accept-Language": "zh-CN",
-    "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Host": "202.202.145.132",
-}
-
-response = requests.get(url, headers=headers3, allow_redirects=False)  # 禁止重定向
-JSESSIONID = list(response.cookies)[0].value
-
-ic(JSESSIONID)
-
-# 获取queryString
-response = requests.get("http://123.123.123.123", headers=headers1)
-pattern = r"top\.self\.location\.href='([^']*)'"
-match = re.search(pattern, response.text)
-href_value = match.group(1)
-queryString = href_value.split("?")[1]
-
-ic(queryString)
 
 # 获取userIndex
 url = "http://202.202.145.132/eportal/InterFace.do?method=loginOfCas"
@@ -125,7 +131,7 @@ cookies = {
 }
 
 data = {
-    "userId": "12207980718",
+    "userId": ACCOUNT,
     "flag": "casauthofservicecheck",
     # 需要编码两次
     "service": quote(quote(SERVICE)),  # 中国移动 / 中国电信
