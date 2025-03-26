@@ -151,4 +151,4 @@ response = requests.post(
 )
 
 ic(response.status_code)
-ic(response.text)
+ic(response.content.decode("utf-8"))  # 登录信息获取失败，导致后续无法进行运营商选择，至今无法解决
