@@ -1,20 +1,10 @@
 # CQUT校园网登录脚本
 
-## 🚀开始
-
-```powershell
-pip install -r requirements.txt # 安装依赖项
-# 设置环境变量
-$env:ACCOUNT="知行理工账号"
-$env:PASSWORD="知行理工密码"
-python main.py # 运行程序
-```
-
 ## 🐸有待解决的问题
 
 1.  只有在使用JavaScript通过JSEncrypt加密的原密文作为密码项时才能登录，使用Python的pycryptodome库作同样复刻同样操作时却提示错误。
 
-2.  仅仅解决了登录问题，还需要进一步选择运营商。
+2.  仅仅解决了登录问题，还需要进一步选择运营商，本代码在运营商选择处报错。
 
 ## 📝问题1 参考代码
 
@@ -54,8 +44,16 @@ function getSecretParam (p)  {
 
 Python复刻版本详见[encrypt.py](encrypt.py)
 
+## 📝问题2 参考思路
+
+由于数据包需要双重URL编码，但是requests会自动编码一层，所以只需要编码一次，此前手动编码了两次，所以错误，使用`netcat`定位问题所在。
+
+但这并没有解决关键问题，认为是登陆成功后保持登陆状态的cookies没有被使用起来，于是无法维持服务端知晓客户端登陆状态，于是使用客户端的cookies进行后续操作，但仍无济于事。
+
 ## 🤔逆向思路与工具推荐
 
 1.  `Burp Suite Professional`分析数据包
 
 2.  受到`洛卡尔物质交换定律`的启发，在所有请求-响应中查找你账号的敏感信息
+
+3.	`Netcat`可分析你的数据包构造与原始数据包的差异情况。
