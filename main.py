@@ -1,13 +1,10 @@
 import requests
 import re
 
-from dotenv import load_dotenv
-from encrypt import *
 from icecream import ic
-from json import load
-from urllib.parse import quote, parse_qs, urlparse
+from json import load, dumps
+from urllib.parse import quote
 
-load_dotenv()
 
 with open(".env.json", "r", encoding="utf-8") as f:
     data: dict = load(f)
@@ -34,19 +31,16 @@ JSESSIONID = list(response.cookies)[0].value
 
 ic(JSESSIONID)
 
-if response.status_code == 302:
-    target = response.headers["Location"]
-    response = requests.get(target, headers=headers3)
-else:
-    ic("状态码出错")
-    exit(0)
+assert response.status_code == 302
+target = response.headers["Location"]
+response = requests.get(target, headers=headers3)
+ic(response.status_code)
 
 pattern = r"top\.self\.location\.href='([^']*)'"
 match = re.search(pattern, response.text)
 href_value = match.group(1)
 queryString = href_value.split("?")[1]
 
-ic(queryString)
 
 url = "https://uis.cqut.edu.cn/center-auth-server/vbZl4061/cas/login?service=https://sid.cqut.edu.cn/cas/login?client_name=adapter"
 
@@ -101,11 +95,94 @@ data = {
     "loginType": "login",
 }
 
-response = requests.post(url, headers=headers2, data=json.dumps(data), cookies=cookies)
+response = requests.post(
+    url, headers=headers2, json=dumps(data), cookies=cookies
+)  # 登录成功!
+
 
 ic(response.status_code)
 ic(response.text)
 
+# cookies带有:
+# 1.auth_server_token
+# 2.COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN
+cookies1 = response.cookies
+
+url = "https://uis.cqut.edu.cn/center-auth-server/vbZl4061/cas/login"
+
+params = {"service": "https://sid.cqut.edu.cn/cas/login?client_name=adapter"}
+
+headers = {
+    "Host": "uis.cqut.edu.cn",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "zh-CN",
+    "Sec-Fetch-Site": "cross-site",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Upgrade-Insecure-Requests": "1",
+    "Priority": "u=0, i",
+    "Connection": "keep-alive",
+}
+
+response = requests.get(url, params=params, headers=headers)
+
+# cookies带有:
+# 1.COOKIE_AUTH_SERVER_CLIENT_TAG
+cookies2 = response.cookies
+
+url = "https://uis.cqut.edu.cn/center-auth-server/vbZl4061/cas/login"
+
+params = {"service": "https://sid.cqut.edu.cn/cas/login?client_name=adapter"}
+
+headers = {
+    "Host": "uis.cqut.edu.cn",
+    "Cache-Control": "max-age=0",
+    "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Accept-Language": "zh-CN",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Priority": "u=0, i",
+}
+
+response = requests.get(
+    url, params=params, headers=headers, cookies=cookies1.update(cookies2)
+)
+
+
+# 获取用户信息失败
+response = requests.post(
+    "http://202.202.145.132/eportal/InterFace.do?method=getOnlineUserInfo",
+    headers={
+        "Host": "202.202.145.132",
+        "Accept-Language": "zh-CN",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Accept": "*/*",
+        "Origin": "http://202.202.145.132",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    },
+    cookies={
+        "EPORTAL_COOKIE_SERVER": "",
+        "EPORTAL_COOKIE_SERVER_NAME": "",
+        "JSESSIONID": JSESSIONID,
+    },
+    json={"userIndex": ""},
+)
+
+ic(response.content.decode("utf-8"))
 
 # 获取userIndex
 url = "http://202.202.145.132/eportal/InterFace.do?method=loginOfCas"
@@ -133,10 +210,8 @@ cookies = {
 data = {
     "userId": ACCOUNT,
     "flag": "casauthofservicecheck",
-    # 需要编码两次
-    "service": quote(quote(SERVICE)),  # 中国移动 / 中国电信
-    # 需要编码两次
-    "queryString": quote(quote(queryString)),
+    "service": quote(SERVICE),  # 中国移动 / 中国电信
+    "queryString": quote(queryString),
     "operatorPwd": "",  # 空
     "operatorUserId": "",  # 空
     "passwordEncrypt": "false",
@@ -151,4 +226,4 @@ response = requests.post(
 )
 
 ic(response.status_code)
-ic(response.content.decode("utf-8"))  # 登录信息获取失败，导致后续无法进行运营商选择，至今无法解决
+ic(response.content.decode("utf-8"))
