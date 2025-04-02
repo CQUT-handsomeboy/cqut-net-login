@@ -10,3 +10,8 @@ __pycache__/
 
 # 测试
 test*
+
+# Pyinstaller打包工具
+dist/
+build/
+*.spec
