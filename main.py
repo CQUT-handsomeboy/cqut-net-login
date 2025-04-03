@@ -1,174 +1,225 @@
 import requests
 import re
-import inspect
+import json
 
-from icecream import ic
-from json import load, dumps
-from urllib.parse import quote, parse_qsl, urlparse
-from rich import print
-
+from urllib.parse import urlparse, parse_qs, quote
 
 with open(".env.json", "r", encoding="utf-8") as f:
-    data: dict = load(f)
-    ACCOUNT = data.get("account")
-    PASSWORD = data.get("password")
-    PASSWORD_ENCRYPTED = data.get("passwordEncrypted")
-    SERVICE = data.get("service")
+    meta = json.load(f)
+    ACCOUNT = meta["account"]
+    PASSWORD = meta["password"]
+    PASSWORD_ENCRYPTED = meta["passwordEncrypted"]
+    SERVICE = meta["service"]  # 需要登录的运营商名称 中国移动/中国电信
+
+assert SERVICE in {"中国移动", "中国电信"}
+
+session = requests.session()
+
+burp0_url = "http://202.202.145.132:80/"
+
+burp0_headers = {
+    "Accept-Language": "zh-CN",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+}
+
+res = session.get(burp0_url, headers=burp0_headers)  # 001
+
+pattern = r"top\.self\.location\.href='([^']*)'"
+match = re.search(pattern, res.text)
+service = match.group(1)
+_, queryString = service.split("?", maxsplit=1)
+
+print("service", service)
+print("queryString", queryString)
+
+burp0_headers = {
+    "Accept-Language": "zh-CN",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Referer": "http://123.123.123.123/",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+}
+
+res = session.get(service, headers=burp0_headers)  # 004
+refer_url = res.url
+
+SESSION = session.cookies.get("SESSION")
+print("SESSION", SESSION is not None)
+
+burp0_url = "https://sid.cqut.edu.cn/cas/clientredirect"
+
+burp0_headers = {
+    "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Accept-Language": "zh-CN",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Dest": "document",
+    "Referer": refer_url,
+    "Priority": "u=0, i",
+    "Connection": "keep-alive",
+}
+
+params = {
+    "client_name": ["adapter"],
+    "service": [service],
+}
+
+res = session.get(burp0_url, headers=burp0_headers, params=params)  # 007 -> 011
+refer_url = res.url
+
+service_with_delegatedclientid = parse_qs(urlparse(refer_url).query).get("service")
+
+PAC4JDELSESSION = session.cookies.get("PAC4JDELSESSION")
+COOKIE_AUTH_SERVER_CLIENT_TAG = session.cookies.get("COOKIE_AUTH_SERVER_CLIENT_TAG")
+
+print("PAC4JDELSESSION", PAC4JDELSESSION is not None)
+print("COOKIE_AUTH_SERVER_CLIENT_TAG", COOKIE_AUTH_SERVER_CLIENT_TAG is not None)
+
+# 登录
+burp0_url = "https://uis.cqut.edu.cn:443/center-auth-server/sso/doLogin"
+burp0_headers = {
+    "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Accept-Language": "zh-CN",
+    "Sec-Ch-Ua-Mobile": "?0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Content-Type": "application/json, application/json;charset=UTF-8",
+    "Accept": "*/*",
+    "Origin": "https://uis.cqut.edu.cn",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
+    "Referer": refer_url,
+    "Accept-Encoding": "gzip, deflate, br",
+    "Priority": "u=1, i",
+}
+
+burp0_json = {
+    "loginType": "login",
+    "name": ACCOUNT,
+    "pwd": PASSWORD_ENCRYPTED,
+    "universityId": "100005",
+    "verifyCode": None,
+}
+
+res = session.post(burp0_url, headers=burp0_headers, json=burp0_json)  # 034
 
 
-def function_log(func):
+auth_server_token = session.cookies.get("auth_server_token")
+COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN = session.cookies.get(
+    "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN"
+)
 
-    def wrapper(*args, **kwargs):
-        ps = list(inspect.signature(func).parameters)
-        print(f"{func.__name__} [blue]开始执行,参数列表{ps}[/blue]")
-        result = func(*args, **kwargs)
-        print(f"{func.__name__} 执行结果:[green]{result}[/green]")
-        print("-" * 10)
-        return result
+print("auth_server_token", auth_server_token is not None)
+print(
+    "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN",
+    COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN is not None,
+)
 
-    return wrapper
+print(res.json())  # 登陆成功
 
+burp0_url = "https://uis.cqut.edu.cn:443/center-auth-server/vbZl4061/cas/login"
 
-@function_log
-def get_JSESSIONID_and_next_location():
-    headers = {
-        "Accept-Language": "zh-CN",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Host": "202.202.145.132",
-    }
-    url = "http://202.202.145.132"
-    response = requests.get(url, headers=headers, allow_redirects=False)
-    JSESSIONID = list(response.cookies)[0].value
-    next_location = response.headers["Location"]
-    return JSESSIONID, next_location
+burp0_headers = {
+    "Cache-Control": "max-age=0",
+    "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Accept-Language": "zh-CN",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document",
+    "Referer": refer_url,
+    "Accept-Encoding": "gzip, deflate, br",
+    "Priority": "u=0, i",
+}
 
+params = {"service": [service_with_delegatedclientid]}
 
-@function_log
-def get_js_tag_href_value(JSESSIONID, next_location):
-    headers = {
-        "Accept-Language": "zh-CN",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Host": "202.202.145.132",
-    }
-    cookies = {
-        "EPORTAL_COOKIE_SERVER": "",
-        "EPORTAL_COOKIE_SERVER_NAME": "",
-        "JSESSIONID": JSESSIONID,
-    }
-    response = requests.get(next_location, headers=headers, cookies=cookies)
-    pattern = r"top\.self\.location\.href='([^']*)'"
-    match = re.search(pattern, response.text)
-    href_value = match.group(1)
-    return href_value
+cookies = {
+    "COOKIE_AUTH_SERVER_CLIENT_TAG": session.cookies["COOKIE_AUTH_SERVER_CLIENT_TAG"],
+    "auth_server_token": session.cookies["auth_server_token"],
+    "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN": session.cookies[
+        "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN"
+    ],
+}
 
+res = session.get(
+    burp0_url,
+    headers=burp0_headers,
+    params=params,
+    cookies=cookies,
+)  # 035
 
-@function_log
-def get_SESSION_and_refer_url(JSESSIONID, js_tag_href):
-    headers = {
-        "Accept-Language": "zh-CN",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Host": "202.202.145.132",
-    }
-    cookies = {
-        "EPORTAL_COOKIE_SERVER": "",
-        "EPORTAL_COOKIE_SERVER_NAME": "",
-        "JSESSIONID": JSESSIONID,
-    }
-    response = requests.get(
-        js_tag_href, headers=headers, cookies=cookies, allow_redirects=False
-    )
-    next_location = response.headers["Location"]
+print(res.status_code)
 
-    response = requests.get(
-        next_location,
-        headers=headers
-        | {"Host": "sid.cqut.edu.cn", "Refer": "http://123.123.123.123/"},
-    )
+PAC4JDELSESSION = session.cookies.get("PAC4JDELSESSION")
+SOURCEID_TGC = session.cookies.get("SOURCEID_TGC")
+rg_objectid = session.cookies.get("rg_objectid")
 
-    print(f"[purple]{response.status_code}[/purple]")
-    print(f"[purple]{response.text}[/purple]")
+print("PAC4JDELSESSION", PAC4JDELSESSION)
+print("SOURCEID_TGC", SOURCEID_TGC)
+print("rg_objectid", rg_objectid)
 
-    SESSION = list(response.cookies)[0].value
-    refer_url = response.url
+# loginOfCas
 
-    return SESSION, refer_url
+burp0_url = "http://202.202.145.132:80/eportal/InterFace.do?method=loginOfCas"
 
+burp0_cookies = {
+    "EPORTAL_COOKIE_SERVER": "",
+    "EPORTAL_COOKIE_SERVER_NAME": "",
+    "servicesJsonStr": f"{ACCOUNT}%40%25%25username%40%25%25%E4%B8%AD%E5%9B%BD%E7%94%B5%E4%BF%A1%40%E4%B8%AD%E5%9B%BD%E7%A7%BB%E5%8A%A8%40%E6%A0%A1%E5%9B%AD%E5%86%85%E7%BD%91",
+    # 手动，JS设置
+    "EPORTAL_COOKIE_DOMAIN": "",
+    "EPORTAL_COOKIE_OPERATORPWD": "",
+    "JSESSIONID": session.cookies["JSESSIONID"],
+}
 
-@function_log
-def get_PAC4JDELSESSION_and_next_location(SESSION, refer_url, href_value):
-    headers = {
-        "Host": "sid.cqut.edu.cn",
-        "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"Windows"',
-        "Accept-Language": "zh-CN",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Sec-Fetch-Site": "same-origin",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Dest": "document",
-        "Referer": refer_url,
-        "Accept-Encoding": "gzip, deflate, br",
-        "Priority": "u=0, i",
-        "Connection": "keep-alive",
-    }
+burp0_headers = {
+    "Accept-Language": "zh-CN",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "Accept": "*/*",
+    "Origin": "http://202.202.145.132",
+    "Referer": service,
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+}
 
-    print("refer_url", refer_url)
+burp0_data = {
+    "userId": ACCOUNT,
+    "flag": "casauthofservicecheck",
+    "service": quote(SERVICE),
+    "queryString": queryString,
+    "operatorPwd": "",
+    "operatorUserId": "",
+    "passwordEncrypt": "false",
+    "rememberService": "false",
+}
 
-    response = requests.get(
-        # url="http://127.0.0.1:8765/cas/clientredirect?client_name=adapter",
-        url="http://sid.cqut.edu.cn/cas/clientredirect?client_name=adapter",
-        headers=headers,
-        cookies={"SESSION": SESSION},
-        params={"service": href_value},
-        allow_redirects=False,
-    )
+res = session.post(
+    burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data
+)
 
-    assert response.status_code == 308, str(response.status_code)
-    next_location = response.headers["Location"]
+print(res.status_code)
 
-    headers = {
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6478.127 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Sec-Fetch-Site": "cross-site",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"Windows"',
-        "Accept-Language": "zh-CN",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Priority": "u=0, i",
-        "Connection": "keep-alive",
-        "Referer": refer_url,
-    }
-
-    response = requests.get(next_location, headers=headers, allow_redirects=False)
-    print(
-        response.cookies
-    )  # 这里的cookies有设置新的SESSION，此时JSESSIONID失效，疑惑？
-
-    return
+userIndex = res.json()["userIndex"]
+print("userIndex", userIndex)
 
 
-if __name__ == "__main__":
-    JSESSIONID, next_location = get_JSESSIONID_and_next_location()
-    href_value = get_js_tag_href_value(JSESSIONID, next_location)
-    queryString = href_value.split("?")[1]
-    SESSION, refer_url = get_SESSION_and_refer_url(JSESSIONID, href_value)
-    get_PAC4JDELSESSION_and_next_location(SESSION, refer_url, href_value)
-    exit(0)
+print("登陆成功!")
