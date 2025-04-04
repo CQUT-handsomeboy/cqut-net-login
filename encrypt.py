@@ -33,14 +33,3 @@ def get_secret_param(p: str, public_key_pem: str) -> str:
 
     return json.dumps(arr)
 
-
-if __name__ == "__main__":
-
-    public_key_pem = """-----BEGIN PUBLIC KEY-----
-    MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDACwPDxYycdCiNeblZa9LjvDzb
-    iZU1vc9gKRcG/pGjZ/DJkI4HmoUE2r/o6SfB5az3s+H5JDzmOMVQ63hD7LZQGR4k
-    3iYWnCg3UpQZkZEtFtXBXsQHjKVJqCiEtK+gtxz4WnriDjf+e/CxJ7OD03e7sy5N
-    Y/akVmYNtghKZzz6jwIDAQAB
-    -----END PUBLIC KEY-----
-    """
-    print(get_secret_param("[cqut]P@ssw0rd", public_key_pem))

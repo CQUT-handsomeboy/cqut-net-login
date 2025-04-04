@@ -33,9 +33,6 @@ match = re.search(pattern, res.text)
 service = match.group(1)
 _, queryString = service.split("?", maxsplit=1)
 
-print("service", service)
-print("queryString", queryString)
-
 burp0_headers = {
     "Accept-Language": "zh-CN",
     "Upgrade-Insecure-Requests": "1",
@@ -50,7 +47,7 @@ res = session.get(service, headers=burp0_headers)  # 004
 refer_url = res.url
 
 SESSION = session.cookies.get("SESSION")
-print("SESSION", SESSION is not None)
+assert SESSION is not None, "获取SESSION失败"
 
 burp0_url = "https://sid.cqut.edu.cn/cas/clientredirect"
 
@@ -83,8 +80,10 @@ service_with_delegatedclientid = parse_qs(urlparse(refer_url).query).get("servic
 PAC4JDELSESSION = session.cookies.get("PAC4JDELSESSION")
 COOKIE_AUTH_SERVER_CLIENT_TAG = session.cookies.get("COOKIE_AUTH_SERVER_CLIENT_TAG")
 
-print("PAC4JDELSESSION", PAC4JDELSESSION is not None)
-print("COOKIE_AUTH_SERVER_CLIENT_TAG", COOKIE_AUTH_SERVER_CLIENT_TAG is not None)
+assert PAC4JDELSESSION is not None, "获取PAC4JDELSESSION失败"
+assert (
+    COOKIE_AUTH_SERVER_CLIENT_TAG is not None
+), "获取COOKIE_AUTH_SERVER_CLIENT_TAG失败"
 
 # 登录
 burp0_url = "https://uis.cqut.edu.cn:443/center-auth-server/sso/doLogin"
@@ -121,13 +120,18 @@ COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN = session.cookies.get(
     "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN"
 )
 
-print("auth_server_token", auth_server_token is not None)
-print(
-    "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN",
-    COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN is not None,
-)
+assert auth_server_token is not None, "获取auth_server_token失败"
+assert (
+    COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN is not None
+), "获取COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN失败"
 
-print(res.json())  # 登陆成功
+doLogin_json: dict = res.json()
+
+assert (
+    isinstance(doLogin_json, dict)
+    and doLogin_json["code"] == 200
+    and "登录成功" in doLogin_json["msg"].strip()
+), "登陆失败，可能账号或者密码错误"
 
 burp0_url = "https://uis.cqut.edu.cn:443/center-auth-server/vbZl4061/cas/login"
 
@@ -166,19 +170,20 @@ res = session.get(
     cookies=cookies,
 )  # 035
 
-print(res.status_code)
-
 PAC4JDELSESSION = session.cookies.get("PAC4JDELSESSION")
 SOURCEID_TGC = session.cookies.get("SOURCEID_TGC")
 rg_objectid = session.cookies.get("rg_objectid")
 
-print("PAC4JDELSESSION", PAC4JDELSESSION)
-print("SOURCEID_TGC", SOURCEID_TGC)
-print("rg_objectid", rg_objectid)
+assert PAC4JDELSESSION is not None, "获取PAC4JDELSESSION失败"
+assert SOURCEID_TGC is not None, "获取SOURCEID_TGC失败"
+assert rg_objectid is not None, "获取rg_objectid失败"
 
 # loginOfCas
 
 burp0_url = "http://202.202.145.132:80/eportal/InterFace.do?method=loginOfCas"
+
+JSESSIONID = session.cookies.get("JSESSIONID")
+assert JSESSIONID is not None, "获取JSESSIONID失败"
 
 burp0_cookies = {
     "EPORTAL_COOKIE_SERVER": "",
@@ -187,7 +192,7 @@ burp0_cookies = {
     # 手动，JS设置
     "EPORTAL_COOKIE_DOMAIN": "",
     "EPORTAL_COOKIE_OPERATORPWD": "",
-    "JSESSIONID": session.cookies["JSESSIONID"],
+    "JSESSIONID": JSESSIONID,
 }
 
 burp0_headers = {
@@ -216,10 +221,12 @@ res = session.post(
     burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data
 )
 
-print(res.status_code)
+loginOfCas_json = res.json()
 
-userIndex = res.json()["userIndex"]
-print("userIndex", userIndex)
-
+assert (
+    isinstance(loginOfCas_json, dict)
+    and "获取JSESSIONID失败"
+    and loginOfCas_json.get("userIndex")
+), "获取userIndex失败"
 
 print("登陆成功!")
