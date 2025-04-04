@@ -1,35 +1,30 @@
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_v1_5
 import base64
-import urllib.parse
-import json
+import rsa
+
+from urllib.parse import quote
 
 
-def load_rsa_public_key(pem_key: str) -> RSA.RsaKey:
-    pem_key = pem_key.strip()
-    return RSA.import_key(pem_key)
+"""
+以下是由k君提供的加密算法
+"""
 
 
-def rsa_encrypt(public_key: RSA.RsaKey, data: str) -> str:
-    cipher = PKCS1_v1_5.new(public_key)
-    encrypted_data = cipher.encrypt(data.encode("utf-8"))
-    return base64.b64encode(encrypted_data).decode("utf-8")
+class rsaEncrypy:
+    def __init__(self):
+        pubkey = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDACwPDxYycdCiNeblZa9LjvDzbiZU1vc9gKRcG/pGjZ/DJkI4HmoUE2r/o6SfB5az3s+H5JDzmOMVQ63hD7LZQGR4k3iYWnCg3UpQZkZEtFtXBXsQHjKVJqCiEtK+gtxz4WnriDjf+e/CxJ7OD03e7sy5NY/akVmYNtghKZzz6jwIDAQAB\n-----END PUBLIC KEY-----"
+        self.key = rsa.PublicKey.load_pkcs1_openssl_pem(pubkey.encode())
 
-
-def get_secret_param(p: str, public_key_pem: str) -> str:
-    public_key = load_rsa_public_key(public_key_pem)
-    arr = []
-    max_index = 0
-
-    for i in range(len(p) + 1):
-        if (i + 1) % 30 == 0:
-            encrypted_part = rsa_encrypt(public_key, p[max_index:i])
-            arr.append(urllib.parse.quote(encrypted_part))
-            max_index = i
-
-    if max_index != len(p):
-        encrypted_part = rsa_encrypt(public_key, p[max_index:])
-        arr.append(urllib.parse.quote(encrypted_part))
-
-    return json.dumps(arr)
-
+    def run(self, e) -> str:
+        parms = []
+        for i in range(0, len(e), 60):
+            result = e[i : i + 60]
+            e_byte = result.encode("utf-8")
+            s = rsa.encrypt(e_byte, self.key)
+            t = base64.b64encode(s).decode().replace("=", "")
+            parms.append(t)
+        r = str(parms)
+        r = r.replace(" ", "").replace("'", '"')
+        encoded_str = quote(r.encode("utf-8"), safe="")
+        encoded_str = encoded_str.replace("%7C", "%5Cu003d%5Cn")
+        print(encoded_str)
+        return encoded_str
