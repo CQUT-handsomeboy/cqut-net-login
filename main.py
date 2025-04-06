@@ -10,7 +10,6 @@ with open(".env.json", "r", encoding="utf-8") as f:
     meta = json.load(f)
     ACCOUNT = meta["account"]
     PASSWORD = meta["password"]
-    PASSWORD_ENCRYPTED = meta["passwordEncrypted"]
     SERVICE = meta["service"]  # 需要登录的运营商名称 中国移动/中国电信
 
 assert SERVICE in {"中国移动", "中国电信"}
