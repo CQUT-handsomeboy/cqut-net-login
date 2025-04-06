@@ -14,7 +14,7 @@
 {
     "account":"<你的学号>", 
     "password":"<你的密码>", // 没用，因为没搞定加密
-    "passwordEncrypted":"<你的密码经过公钥加密后的密文>",
+    "passwordEncrypted":"<你的密码经过公钥加密后的密文>", // 有用，如何得到这个密文，请看下文
     "service":"<你想登录的运营商>" // 中国移动 / 中国电信
 }
 ```
@@ -67,6 +67,12 @@ function getSecretParam (p)  {
 ```
 
 Python复刻版本详见[encrypt.py](encrypt.py)
+
+## 🔑如何得到密文
+
+最简单的方法当然是通过抓包，在正常登录请求中抓取到带有`pwd`字段的`POST` `JSON`。
+
+更为优雅的方法是将上述加密逻辑的代码在任意一个带有`JSEncrypt`的网站执行，得到密文。
 
 ## 🔧工具推荐
 
