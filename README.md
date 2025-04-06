@@ -87,3 +87,5 @@ Python复刻版本详见[encrypt.py](encrypt.py)
 [CAS单点登录原理](https://blog.csdn.net/ban_tang/article/details/80015946)
 
 [集美大学锐捷ePortal Web 认证的登录脚本](https://github.com/callmeliwen/RuijiePortalLoginTool)
+
+[Python实现RSA(jsencrypt)加密的两种方式](https://blog.csdn.net/wangzhuanjia/article/details/128382024)

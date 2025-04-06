@@ -3,6 +3,8 @@ import re
 import json
 
 from urllib.parse import urlparse, parse_qs, quote
+from encrypt import encrypt
+
 
 with open(".env.json", "r", encoding="utf-8") as f:
     meta = json.load(f)
@@ -107,6 +109,7 @@ burp0_headers = {
 burp0_json = {
     "loginType": "login",
     "name": ACCOUNT,
+    # "pwd": encrypt(PASSWORD),
     "pwd": PASSWORD_ENCRYPTED,
     "universityId": "100005",
     "verifyCode": None,
@@ -114,16 +117,10 @@ burp0_json = {
 
 res = session.post(burp0_url, headers=burp0_headers, json=burp0_json)  # 034
 
-
 auth_server_token = session.cookies.get("auth_server_token")
 COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN = session.cookies.get(
     "COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN"
 )
-
-assert auth_server_token is not None, "获取auth_server_token失败"
-assert (
-    COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN is not None
-), "获取COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN失败"
 
 doLogin_json: dict = res.json()
 
@@ -132,6 +129,12 @@ assert (
     and doLogin_json["code"] == 200
     and "登录成功" in doLogin_json["msg"].strip()
 ), "登陆失败，可能账号或者密码错误"
+
+assert auth_server_token is not None, "获取auth_server_token失败"
+assert (
+    COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN is not None
+), "获取COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN失败"
+
 
 burp0_url = "https://uis.cqut.edu.cn:443/center-auth-server/vbZl4061/cas/login"
 
@@ -174,7 +177,7 @@ PAC4JDELSESSION = session.cookies.get("PAC4JDELSESSION")
 SOURCEID_TGC = session.cookies.get("SOURCEID_TGC")
 rg_objectid = session.cookies.get("rg_objectid")
 
-assert PAC4JDELSESSION is not None, "获取PAC4JDELSESSION失败"
+assert PAC4JDELSESSION is None, "获取PAC4JDELSESSION失败"
 assert SOURCEID_TGC is not None, "获取SOURCEID_TGC失败"
 assert rg_objectid is not None, "获取rg_objectid失败"
 

@@ -1,30 +1,35 @@
 import base64
-import rsa
+from Crypto.Cipher import PKCS1_v1_5 as Cipher_pksc1_v1_5
+from Crypto.PublicKey import RSA
 
-from urllib.parse import quote
+import json
+import base64
+
+public_key = """-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDACwPDxYycdCiNeblZa9LjvDzb
+iZU1vc9gKRcG/pGjZ/DJkI4HmoUE2r/o6SfB5az3s+H5JDzmOMVQ63hD7LZQGR4k
+3iYWnCg3UpQZkZEtFtXBXsQHjKVJqCiEtK+gtxz4WnriDjf+e/CxJ7OD03e7sy5N
+Y/akVmYNtghKZzz6jwIDAQAB
+-----END PUBLIC KEY-----"""
 
 
-"""
-以下是由k君提供的加密算法
-"""
+def encrypt(password):
+    rsakey = RSA.importKey(public_key)
+    cipher = Cipher_pksc1_v1_5.new(rsakey)
+    cipher_text = base64.b64encode(cipher.encrypt(password.encode()))
+    return cipher_text.decode()
 
 
-class rsaEncrypy:
-    def __init__(self):
-        pubkey = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDACwPDxYycdCiNeblZa9LjvDzbiZU1vc9gKRcG/pGjZ/DJkI4HmoUE2r/o6SfB5az3s+H5JDzmOMVQ63hD7LZQGR4k3iYWnCg3UpQZkZEtFtXBXsQHjKVJqCiEtK+gtxz4WnriDjf+e/CxJ7OD03e7sy5NY/akVmYNtghKZzz6jwIDAQAB\n-----END PUBLIC KEY-----"
-        self.key = rsa.PublicKey.load_pkcs1_openssl_pem(pubkey.encode())
+def getSecretParam(p):
+    arr = []
+    maxIndex = 0
 
-    def run(self, e) -> str:
-        parms = []
-        for i in range(0, len(e), 60):
-            result = e[i : i + 60]
-            e_byte = result.encode("utf-8")
-            s = rsa.encrypt(e_byte, self.key)
-            t = base64.b64encode(s).decode().replace("=", "")
-            parms.append(t)
-        r = str(parms)
-        r = r.replace(" ", "").replace("'", '"')
-        encoded_str = quote(r.encode("utf-8"), safe="")
-        encoded_str = encoded_str.replace("%7C", "%5Cu003d%5Cn")
-        print(encoded_str)
-        return encoded_str
+    for i in range(len(p) + 1):
+        if (i + 1) % 30 == 0:
+            arr.append(encrypt(p[maxIndex:i]))
+            maxIndex = i
+
+    if maxIndex != len(p):
+        arr.append(encrypt(p[maxIndex : len(p)]))
+
+    return json.dumps(arr)
