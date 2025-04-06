@@ -1,2 +1,2 @@
-requests
-pycryptodome
+requests==2.32.3
+pycryptodome==3.22.0

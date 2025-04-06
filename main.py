@@ -3,7 +3,7 @@ import re
 import json
 
 from urllib.parse import urlparse, parse_qs, quote
-from encrypt import encrypt
+from encrypt import getSecretParam
 
 
 with open(".env.json", "r", encoding="utf-8") as f:
@@ -109,8 +109,8 @@ burp0_headers = {
 burp0_json = {
     "loginType": "login",
     "name": ACCOUNT,
-    # "pwd": encrypt(PASSWORD),
-    "pwd": PASSWORD_ENCRYPTED,
+    "pwd": getSecretParam(PASSWORD),
+    # "pwd": PASSWORD_ENCRYPTED,
     "universityId": "100005",
     "verifyCode": None,
 }
