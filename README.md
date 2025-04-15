@@ -6,19 +6,23 @@
 
 # 🚀快速开始
 
-创建一个`.env.json`文件，并填入你的信息。
+设置环境变量`cqut_account`为你的账号，设置`cqut_password`为你的密码，设置`cqut_net_service`为你登录的校园网服务名，*即中国移动或中国电信*。
 
-```jsonc
-{
-    "account":"<你的学号>", 
-    "password":"<你的密码>", 
-    "service":"<你想登录的运营商>" // 中国移动 / 中国电信
-}
+![](./.assets/env.png)
+
+你也可使用Powershell环境变量的设置方法
+
+```powershell
+$env:cqut_account="<you_account>"
+$env:cqut_password="<you_password>"
+$env:cqut_net_service="<you_net_service>"
 ```
 
-```bash
-$ pip install -r requirements.txt # 安装依赖
-$ python main.py # 运行脚本
+然后安装依赖并运行脚本：
+
+```powershell
+pip install -r requirements.txt # 安装依赖
+python main.py # 运行脚本
 ```
 
 # 💡升级后的登录逻辑
