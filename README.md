@@ -18,6 +18,14 @@ $env:cqut_password="<you_password>"
 $env:cqut_net_service="<you_net_service>"
 ```
 
+你还可以在同一目录下设置.env环境变量文件（推荐）
+
+```
+cqut_account=<you_account>
+cqut_password=<you_password>
+cqut_net_service=<you_net_service>
+```
+
 然后安装依赖并运行脚本：
 
 ```powershell

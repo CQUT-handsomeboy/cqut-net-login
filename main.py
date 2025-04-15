@@ -5,11 +5,13 @@ from urllib.parse import urlparse, parse_qs, quote
 from encrypt import getSecretParam
 from tkinter import messagebox
 from os import getenv
+from dotenv import load_dotenv
 
-ACCOUNT = getenv("ACCOUNT")
-PASSWORD = getenv("PASSWORD")
-SERVICE = getenv("SERVICE")
+load_dotenv()
 
+ACCOUNT = getenv("cqut_account")
+PASSWORD = getenv("cqut_password")
+SERVICE = getenv("cqut_net_service")
 
 assert ACCOUNT is not None
 assert PASSWORD is not None
