@@ -1,18 +1,18 @@
 import requests
 import re
-import json
 
 from urllib.parse import urlparse, parse_qs, quote
 from encrypt import getSecretParam
+from tkinter import messagebox
+from os import getenv
+
+ACCOUNT = getenv("ACCOUNT")
+PASSWORD = getenv("PASSWORD")
+SERVICE = getenv("SERVICE")
 
 
-with open(".env.json", "r", encoding="utf-8") as f:
-    meta = json.load(f)
-    ACCOUNT = meta["account"]
-    PASSWORD = meta["password"]
-    PASSWORD_ENCRYPTED = meta["passwordEncrypted"]
-    SERVICE = meta["service"]  # 需要登录的运营商名称 中国移动/中国电信
-
+assert ACCOUNT is not None
+assert PASSWORD is not None
 assert SERVICE in {"中国移动", "中国电信"}
 
 session = requests.session()
@@ -233,3 +233,4 @@ assert (
 ), "获取userIndex失败"
 
 print("登陆成功!")
+messagebox.showinfo("提示", "登录成功！")

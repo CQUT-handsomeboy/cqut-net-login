@@ -1,6 +1,7 @@
 import base64
 from Crypto.Cipher import PKCS1_v1_5 as Cipher_pksc1_v1_5
 from Crypto.PublicKey import RSA
+from urllib.parse import quote
 
 import json
 import base64
@@ -21,6 +22,9 @@ def encrypt(password):
 
 
 def getSecretParam(p):
+    if p is None or p.strip() == "":
+        return ""
+
     arr = []
     maxIndex = 0
 
@@ -32,4 +36,4 @@ def getSecretParam(p):
     if maxIndex != len(p):
         arr.append(encrypt(p[maxIndex : len(p)]))
 
-    return json.dumps(arr)
+    return quote(json.dumps(arr))
