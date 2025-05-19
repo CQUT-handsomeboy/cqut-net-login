@@ -76,7 +76,9 @@ params = {
     "service": [service],
 }
 
-res = session.get(burp0_url, headers=burp0_headers, params=params)  # 007 -> 011
+res = session.get(
+    burp0_url, headers=burp0_headers, params=params, verify=False
+)  # 007 -> 011
 refer_url = res.url
 
 service_with_delegatedclientid = parse_qs(urlparse(refer_url).query).get("service")
@@ -117,7 +119,7 @@ burp0_json = {
     "verifyCode": None,
 }
 
-res = session.post(burp0_url, headers=burp0_headers, json=burp0_json)  # 034
+res = session.post(burp0_url, headers=burp0_headers, json=burp0_json,verify=False)  # 034
 
 auth_server_token = session.cookies.get("auth_server_token")
 COOKIE_AUTH_SERVER_CLIENT_TAG_SURVIVAL_TOKEN = session.cookies.get(
@@ -173,6 +175,7 @@ res = session.get(
     headers=burp0_headers,
     params=params,
     cookies=cookies,
+    verify=False
 )  # 035
 
 PAC4JDELSESSION = session.cookies.get("PAC4JDELSESSION")
@@ -223,7 +226,7 @@ burp0_data = {
 }
 
 res = session.post(
-    burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data
+    burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data,verify=False
 )
 
 loginOfCas_json = res.json()
